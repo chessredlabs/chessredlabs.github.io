@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Chess Red — Questionário Gamificado</title>
 
-<!-- CSP forte (pode mover para header no servidor) -->
+<!-- CSP forte (pode mover para header no servidor). Troque os nonces por valores próprios -->
 <meta http-equiv="Content-Security-Policy"
 content="default-src 'self';
          script-src 'self' 'nonce-a1b2c3';
@@ -179,20 +179,11 @@ content="default-src 'self';
    - Toggle para localStorage (persistência voluntária).
    - Ofuscação: respostas não aparecem como índices claros no source.
 */
-const DEPLOYMENT_ID = "chess-red-qa-002";
+const DEPLOYMENT_ID = "chess-red-qa-003";
 let USE_LOCAL = false; // sessão por padrão
 const OBF_KEY = 0xC7;  // chave fixa p/ ofuscação (XOR). Leve, não inviolável, mas oculta o índice em claro.
 
-function storeGet(key, fallback){
-  const s = USE_LOCAL ? localStorage : sessionStorage;
-  try{ return JSON.parse(s.getItem(`${DEPLOYMENT_ID}:${key}`) || JSON.stringify(fallback)); }
-  catch{ return fallback; }
-}
-function storeSet(key, value){
-  const s = USE_LOCAL ? localStorage : sessionStorage;
-  s.setItem(`${DEPLOYMENT_ID}:${key}`, JSON.stringify(value));
-}
-
+/* ===== i18n ===== */
 const I18N = {
   pt: {
     title:"Chess Red — Questionário Gamificado",
@@ -247,196 +238,107 @@ const I18N = {
   }
 };
 
+/* ===== armazenamento isolado ===== */
+function storeGet(key, fallback){
+  const s = USE_LOCAL ? localStorage : sessionStorage;
+  try{ return JSON.parse(s.getItem(`${DEPLOYMENT_ID}:${key}`) || JSON.stringify(fallback)); }
+  catch{ return fallback; }
+}
+function storeSet(key, value){
+  const s = USE_LOCAL ? localStorage : sessionStorage;
+  s.setItem(`${DEPLOYMENT_ID}:${key}`, JSON.stringify(value));
+}
+
+/* ===== setup ===== */
 const POINTS = { pawn:50, knight:150, bishop:150, rook:200, queen:350, king:500 };
 const START = (()=>{const A=[];for(let i=0;i<8;i++){A.push({id:`r_pawn_${i+1}`,side:"red",type:"pawn",pos:String.fromCharCode(97+i)+2,label:"P"});A.push({id:`b_pawn_${i+1}`,side:"blue",type:"pawn",pos:String.fromCharCode(97+i)+7,label:"p"});}A.push({id:"r_rook_a",side:"red",type:"rook",pos:"a1",label:"R"},{id:"r_rook_h",side:"red",type:"rook",pos:"h1",label:"R"},{id:"b_rook_a",side:"blue",type:"rook",pos:"a8",label:"r"},{id:"b_rook_h",side:"blue",type:"rook",pos:"h8",label:"r"},{id:"r_knight_b",side:"red",type:"knight",pos:"b1",label:"N"},{id:"r_knight_g",side:"red",type:"knight",pos:"g1",label:"N"},{id:"b_knight_b",side:"blue",type:"knight",pos:"b8",label:"n"},{id:"b_knight_g",side:"blue",type:"knight",pos:"g8",label:"n"},{id:"r_bishop_c",side:"red",type:"bishop",pos:"c1",label:"B"},{id:"r_bishop_f",side:"red",type:"bishop",pos:"f1",label:"B"},{id:"b_bishop_c",side:"blue",type:"bishop",pos:"c8",label:"b"},{id:"b_bishop_f",side:"blue",type:"bishop",pos:"f8",label:"b"},{id:"r_queen",side:"red",type:"queen",pos:"d1",label:"Q"},{id:"b_queen",side:"blue",type:"queen",pos:"d8",label:"q"},{id:"r_king",side:"red",type:"king",pos:"e1",label:"K"},{id:"b_king",side:"blue",type:"king",pos:"e8",label:"k"});return A;})();
 
-/* ===== Banco de perguntas (3 idiomas) =====
-   - Para MCQ: usamos ans_enc (índice correto XOR com OBF_KEY) — não há "answer" em claro.
-   - Para texto: sem gabarito.
-*/
+/* ===== banco de perguntas (3 idiomas) com gabarito ofuscado ===== */
 const BANK = {
   red:{
-    pawn:[{
-      q:{pt:"Qual é a prioridade inicial no reconhecimento (Red)?",
-         en:"What is the initial priority in Red Team recon?",
-         es:"¿Cuál es la prioridad inicial en el reconocimiento Red Team?"},
-      t:"mcq",
-      o:[
-        {pt:"Scan agressivo", en:"Aggressive scanning", es:"Escaneo agresivo"},
-        {pt:"Mapear pegadas públicas (DNS/certs/repos)", en:"Map public footprints (DNS/certs/repos)", es:"Mapear huellas públicas (DNS/certs/repos)"},
-        {pt:"Phishing imediato", en:"Immediate phishing", es:"Phishing inmediato"},
-        {pt:"Credenciais padrão", en:"Default credentials", es:"Credenciales por defecto"}
-      ],
-      ans_enc:(1 ^ OBF_KEY) /* gabarito: opção 1 */
-    }],
-    knight:[{
-      q:{pt:"Achou SSRF. Próximo passo?",
-         en:"Found SSRF. Next step?",
-         es:"Encontraste SSRF. ¿Siguiente paso?"},
-      t:"mcq",
-      o:[
-        {pt:"Metadata 169.254.169.254", en:"Metadata 169.254.169.254", es:"Metadata 169.254.169.254"},
-        {pt:"Brute force", en:"Brute force", es:"Fuerza bruta"},
-        {pt:"Payload destrutivo", en:"Destructive payload", es:"Payload destructivo"},
-        {pt:"Post público", en:"Public post", es:"Publicación pública"}
-      ],
-      ans_enc:(0 ^ OBF_KEY)
-    }],
-    bishop:[{
-      q:{pt:"Token em pipeline.bak. Antes de usar?",
-         en:"Token in pipeline.bak. Before using it?",
-         es:"Token en pipeline.bak. ¿Antes de usarlo?"},
-      t:"mcq",
-      o:[
-        {pt:"Usar já", en:"Use it right away", es:"Usarlo ya"},
-        {pt:"Correlacionar com artefatos", en:"Correlate with artifacts", es:"Correlacionar con artefactos"},
-        {pt:"Publicar", en:"Publish it", es:"Publicarlo"},
-        {pt:"Ignorar", en:"Ignore", es:"Ignorar"}
-      ],
-      ans_enc:(1 ^ OBF_KEY)
-    }],
-    rook:[{
-      q:{pt:"Admin default. Ação correta?",
-         en:"Admin default. Correct action?",
-         es:"Admin por defecto. ¿Acción correcta?"},
-      t:"mcq",
-      o:[
-        {pt:"Usar e documentar", en:"Use and document", es:"Usar y documentar"},
-        {pt:"Publicar credencial", en:"Publish credential", es:"Publicar credencial"},
-        {pt:"Ignorar", en:"Ignore", es:"Ignorar"},
-        {pt:"Derrubar", en:"Take it down", es:"Derribarlo"}
-      ],
-      ans_enc:(0 ^ OBF_KEY)
-    }],
-    queen:[{
-      q:{pt:"Falha crítica no gateway. Priorizar?",
-         en:"Critical gateway flaw. Prioritize?",
-         es:"Falla crítica en el gateway. ¿Priorizar?"},
-      t:"mcq",
-      o:[
-        {pt:"Explorar sem controle", en:"Exploit without control", es:"Explotar sin control"},
-        {pt:"Reportar e mitigar", en:"Report and mitigate", es:"Reportar y mitigar"},
-        {pt:"Vender info", en:"Sell info", es:"Vender info"},
-        {pt:"Ignorar", en:"Ignore", es:"Ignorar"}
-      ],
-      ans_enc:(1 ^ OBF_KEY)
-    }],
-    king:[{
-      q:{pt:"Em até 200 chars: como provar risco estratégico com uma campanha Red Team?",
-         en:"In up to 200 chars: how would a Red Team campaign prove strategic risk?",
-         es:"En hasta 200 caracteres: ¿cómo demostraría riesgo estratégico una campaña Red Team?"},
-      t:"text"
-    }]
+    pawn:[{q:{pt:"Qual é a prioridade inicial no reconhecimento (Red)?",en:"What is the initial priority in Red Team recon?",es:"¿Cuál es la prioridad inicial en el reconocimiento Red Team?"},t:"mcq",o:[
+      {pt:"Scan agressivo",en:"Aggressive scanning",es:"Escaneo agresivo"},
+      {pt:"Mapear pegadas públicas (DNS/certs/repos)",en:"Map public footprints (DNS/certs/repos)",es:"Mapear huellas públicas (DNS/certs/repos)"},
+      {pt:"Phishing imediato",en:"Immediate phishing",es:"Phishing inmediato"},
+      {pt:"Credenciais padrão",en:"Default credentials",es:"Credenciales por defecto"}],ans_enc:(1 ^ OBF_KEY)}],
+    knight:[{q:{pt:"Achou SSRF. Próximo passo?",en:"Found SSRF. Next step?",es:"Encontraste SSRF. ¿Siguiente paso?"},t:"mcq",o:[
+      {pt:"Metadata 169.254.169.254",en:"Metadata 169.254.169.254",es:"Metadata 169.254.169.254"},
+      {pt:"Brute force",en:"Brute force",es:"Fuerza bruta"},
+      {pt:"Payload destrutivo",en:"Destructive payload",es:"Payload destructivo"},
+      {pt:"Post público",en:"Public post",es:"Publicación pública"}],ans_enc:(0 ^ OBF_KEY)}],
+    bishop:[{q:{pt:"Token em pipeline.bak. Antes de usar?",en:"Token in pipeline.bak. Before using it?",es:"Token en pipeline.bak. ¿Antes de usarlo?"},t:"mcq",o:[
+      {pt:"Usar já",en:"Use it right away",es:"Usarlo ya"},
+      {pt:"Correlacionar com artefatos",en:"Correlate with artifacts",es:"Correlacionar con artefactos"},
+      {pt:"Publicar",en:"Publish it",es:"Publicarlo"},
+      {pt:"Ignorar",en:"Ignore",es:"Ignorar"}],ans_enc:(1 ^ OBF_KEY)}],
+    rook:[{q:{pt:"Admin default. Ação correta?",en:"Admin default. Correct action?",es:"Admin por defecto. ¿Acción correcta?"},t:"mcq",o:[
+      {pt:"Usar e documentar",en:"Use and document",es:"Usar y documentar"},
+      {pt:"Publicar credencial",en:"Publish credential",es:"Publicar credencial"},
+      {pt:"Ignorar",en:"Ignore",es:"Ignorar"},
+      {pt:"Derrubar",en:"Take it down",es:"Derribarlo"}],ans_enc:(0 ^ OBF_KEY)}],
+    queen:[{q:{pt:"Falha crítica no gateway. Priorizar?",en:"Critical gateway flaw. Prioritize?",es:"Falla crítica en el gateway. ¿Priorizar?"},t:"mcq",o:[
+      {pt:"Explorar sem controle",en:"Exploit without control",es:"Explotar sin control"},
+      {pt:"Reportar e mitigar",en:"Report and mitigate",es:"Reportar y mitigar"},
+      {pt:"Vender info",en:"Sell info",es:"Vender info"},
+      {pt:"Ignorar",en:"Ignore",es:"Ignorar"}],ans_enc:(1 ^ OBF_KEY)}],
+    king:[{q:{pt:"Em até 200 chars: como provar risco estratégico com uma campanha Red Team?",en:"In up to 200 chars: how would a Red Team campaign prove strategic risk?",es:"En hasta 200 caracteres: ¿cómo demostraría riesgo estratégico una campaña Red Team?"},t:"text"}]
   },
   blue:{
-    pawn:[{
-      q:{pt:"Prioridade inicial (Blue)?",
-         en:"Initial priority (Blue)?",
-         es:"Prioridad inicial (Blue)?"},
-      t:"mcq",
-      o:[
-        {pt:"Ignorar logs", en:"Ignore logs", es:"Ignorar logs"},
-        {pt:"Mapear ativos e coberturas", en:"Map assets & detections", es:"Mapear activos y coberturas"},
-        {pt:"Desligar tudo", en:"Shut everything down", es:"Apagar todo"},
-        {pt:"Expor admin", en:"Expose admin", es:"Exponer admin"}
-      ],
-      ans_enc:(1 ^ OBF_KEY)
-    }],
-    knight:[{
-      q:{pt:"WAF mostra SSRF attempts. Ação?",
-         en:"WAF shows SSRF attempts. Action?",
-         es:"WAF muestra intentos de SSRF. ¿Acción?"},
-      t:"mcq",
-      o:[
-        {pt:"Bloquear fonte e analisar pivot", en:"Block source and analyze pivot", es:"Bloquear fuente y analizar pivot"},
-        {pt:"Nada", en:"Do nothing", es:"Nada"},
-        {pt:"Publicar logs", en:"Publish logs", es:"Publicar logs"},
-        {pt:"Remover WAF", en:"Remove WAF", es:"Quitar WAF"}
-      ],
-      ans_enc:(0 ^ OBF_KEY)
-    }],
-    bishop:[{
-      q:{pt:"Conta de serviço suspeita no CI. Primeiro passo?",
-         en:"Suspicious service account in CI. First step?",
-         es:"Cuenta de servicio sospechosa en CI. ¿Primer paso?"},
-      t:"mcq",
-      o:[
-        {pt:"Investigar e isolar", en:"Investigate and isolate", es:"Investigar y aislar"},
-        {pt:"Ignorar", en:"Ignore", es:"Ignorar"},
-        {pt:"Reiniciar", en:"Reboot", es:"Reiniciar"},
-        {pt:"Publicar", en:"Publish", es:"Publicar"}
-      ],
-      ans_enc:(0 ^ OBF_KEY)
-    }],
-    rook:[{
-      q:{pt:"Perímetro seguro?",
-         en:"Secure perimeter?",
-         es:"Perímetro seguro?"},
-      t:"mcq",
-      o:[
-        {pt:"Segmentação + WAF rules", en:"Segmentation + WAF rules", es:"Segmentación + reglas WAF"},
-        {pt:"Abrir portas", en:"Open ports", es:"Abrir puertos"},
-        {pt:"Ignorar TLS", en:"Ignore TLS", es:"Ignorar TLS"},
-        {pt:"Sem monitoramento", en:"No monitoring", es:"Sin monitoreo"}
-      ],
-      ans_enc:(0 ^ OBF_KEY)
-    }],
-    queen:[{
-      q:{pt:"Vários serviços afetados. Priorização?",
-         en:"Multiple services affected. Prioritization?",
-         es:"Varios servicios afectados. ¿Priorización?"},
-      t:"mcq",
-      o:[
-        {pt:"Foco em críticos & conter lateral", en:"Focus on criticals & contain lateral", es:"Foco en críticos y contener lateral"},
-        {pt:"Parar tudo", en:"Stop everything", es:"Parar todo"},
-        {pt:"Aviso público", en:"Public notice", es:"Aviso público"},
-        {pt:"Ignorar", en:"Ignore", es:"Ignorar"}
-      ],
-      ans_enc:(0 ^ OBF_KEY)
-    }],
-    king:[{
-      q:{pt:"Em até 200 chars: como provar ao board que defesa reduziu risco?",
-         en:"In up to 200 chars: how to prove to the board that defense reduced risk?",
-         es:"En hasta 200 caracteres: ¿cómo probar al directorio que la defensa redujo el riesgo?"},
-      t:"text"
-    }]
+    pawn:[{q:{pt:"Prioridade inicial (Blue)?",en:"Initial priority (Blue)?",es:"Prioridad inicial (Blue)?"},t:"mcq",o:[
+      {pt:"Ignorar logs",en:"Ignore logs",es:"Ignorar logs"},
+      {pt:"Mapear ativos e coberturas",en:"Map assets & detections",es:"Mapear activos y coberturas"},
+      {pt:"Desligar tudo",en:"Shut everything down",es:"Apagar todo"},
+      {pt:"Expor admin",en:"Expose admin",es:"Exponer admin"}],ans_enc:(1 ^ OBF_KEY)}],
+    knight:[{q:{pt:"WAF mostra SSRF attempts. Ação?",en:"WAF shows SSRF attempts. Action?",es:"WAF muestra intentos de SSRF. ¿Acción?"},t:"mcq",o:[
+      {pt:"Bloquear fonte e analisar pivot",en:"Block source and analyze pivot",es:"Bloquear fuente y analizar pivot"},
+      {pt:"Nada",en:"Do nothing",es:"Nada"},
+      {pt:"Publicar logs",en:"Publish logs",es:"Publicar logs"},
+      {pt:"Remover WAF",en:"Remove WAF",es:"Quitar WAF"}],ans_enc:(0 ^ OBF_KEY)}],
+    bishop:[{q:{pt:"Conta de serviço suspeita no CI. Primeiro passo?",en:"Suspicious service account in CI. First step?",es:"Cuenta de servicio sospechosa en CI. ¿Primer paso?"},t:"mcq",o:[
+      {pt:"Investigar e isolar",en:"Investigate and isolate",es:"Investigar y aislar"},
+      {pt:"Ignorar",en:"Ignore",es:"Ignorar"},
+      {pt:"Reiniciar",en:"Reboot",es:"Reiniciar"},
+      {pt:"Publicar",en:"Publish",es:"Publicar"}],ans_enc:(0 ^ OBF_KEY)}],
+    rook:[{q:{pt:"Perímetro seguro?",en:"Secure perimeter?",es:"Perímetro seguro?"},t:"mcq",o:[
+      {pt:"Segmentação + WAF rules",en:"Segmentation + WAF rules",es:"Segmentación + reglas WAF"},
+      {pt:"Abrir portas",en:"Open ports",es:"Abrir puertos"},
+      {pt:"Ignorar TLS",en:"Ignore TLS",es:"Ignorar TLS"},
+      {pt:"Sem monitoramento",en:"No monitoring",es:"Sin monitoreo"}],ans_enc:(0 ^ OBF_KEY)}],
+    queen:[{q:{pt:"Vários serviços afetados. Priorização?",en:"Multiple services affected. Prioritization?",es:"Varios servicios afectados. ¿Priorización?"},t:"mcq",o:[
+      {pt:"Foco em críticos & conter lateral",en:"Focus on criticals & contain lateral",es:"Foco en críticos y contener lateral"},
+      {pt:"Parar tudo",en:"Stop everything",es:"Parar todo"},
+      {pt:"Aviso público",en:"Public notice",es:"Aviso público"},
+      {pt:"Ignorar",en:"Ignore",es:"Ignorar"}],ans_enc:(0 ^ OBF_KEY)}],
+    king:[{q:{pt:"Em até 200 chars: como provar ao board que defesa reduziu risco?",en:"In up to 200 chars: how to prove to the board that defense reduced risk?",es:"En hasta 200 caracteres: ¿cómo probar al directorio que la defensa redujo el riesgo?"},t:"text"}]
   }
 };
 
-/* ===== i18n helpers ===== */
-let curLang = storeGet("state", {lang:"pt"}).lang || "pt";
-function t(key){ return (I18N[curLang] && I18N[curLang][key]) || I18N["pt"][key] || key; }
-function applyI18N(){
-  document.querySelectorAll("[data-i18n]").forEach(el=>{
-    const key = el.getAttribute("data-i18n");
-    el.textContent = t(key);
-  });
-  // também atualiza labels das opções do <select> side
-  const sideRed = document.querySelector('option[value="red"][data-i18n="sideRed"]');
-  const sideBlue= document.querySelector('option[value="blue"][data-i18n="sideBlue"]');
-  if(sideRed) sideRed.textContent = t("sideRed");
-  if(sideBlue) sideBlue.textContent = t("sideBlue");
-}
+/* ===== elementos ===== */
+const E=(id)=>document.getElementById(id);
+const board=E("board"), statusList=E("statusList"), progressEl=E("progress");
+const selLang=E("selLang"), selTheme=E("selTheme"), selSide=E("selSide");
+const btnReset=E("btnReset"), btnPersist=E("btnPersist");
+const back=E("back"), mTitle=E("mTitle"), mSub=E("mSub"), mDesc=E("mDesc"), mBody=E("mBody"), mBadge=E("mBadge"), mClose=E("mClose"), mSend=E("mSend"), mMsg=E("mMsg");
 
 /* ===== estado ===== */
-let state = storeGet("state", {answers:{}, theme:"red", side:"red", lang: curLang});
-const board = document.getElementById("board");
-const statusList = document.getElementById("statusList");
-const progressEl = document.getElementById("progress");
-const selLang = document.getElementById("selLang");
-const selTheme = document.getElementById("selTheme");
-const selSide = document.getElementById("selSide");
-const btnReset = document.getElementById("btnReset");
-const btnPersist = document.getElementById("btnPersist");
+let state = storeGet("state", {answers:{}, theme:"red", side:"red", lang:"pt"});
 selLang.value = state.lang; selTheme.value = state.theme; selSide.value = state.side;
 
-/* ===== util ===== */
+/* ===== helpers ===== */
+function t(key){ const L=I18N[state.lang]||I18N.pt; return L[key]||I18N.pt[key]||key; }
+function applyI18N(){
+  document.querySelectorAll("[data-i18n]").forEach(el=>{ el.textContent = t(el.getAttribute("data-i18n")); });
+  const redOpt=document.querySelector('option[value="red"][data-i18n="sideRed"]');
+  const blueOpt=document.querySelector('option[value="blue"][data-i18n="sideBlue"]');
+  if(redOpt) redOpt.textContent=t("sideRed"); if(blueOpt) blueOpt.textContent=t("sideBlue");
+}
 function posToIdx(p){const c=p.charCodeAt(0)-97;const r=parseInt(p[1],10)-1;return (7-r)*8+c;}
 function hash(s){let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;}return h;}
+function decodeAnswer(ans_enc){ return ans_enc ^ OBF_KEY; }
 
 /* ===== board ===== */
 function buildBoard(){
-  board.textContent="";
+  board.textContent = "";
   for(let r=8;r>=1;r--){
     for(let c=0;c<8;c++){
       const sq = document.createElement("div");
@@ -447,12 +349,12 @@ function buildBoard(){
     }
   }
   START.forEach(p=>{
-    const b = document.createElement("button");
+    const b=document.createElement("button");
     b.type="button"; b.className="piece"; b.dataset.id=p.id; b.dataset.side=p.side; b.dataset.type=p.type; b.dataset.pos=p.pos;
-    const sym = document.createElement("div"); sym.className="sym"; sym.textContent = ({king:"♚",queen:"♛",rook:"♜",bishop:"♝",knight:"♞"})[p.type] || "♟";
-    const lbl = document.createElement("div"); lbl.className="lbl"; lbl.textContent=p.type;
+    const sym=document.createElement("div"); sym.className="sym"; sym.textContent=({king:"♚",queen:"♛",rook:"♜",bishop:"♝",knight:"♞"})[p.type]||"♟";
+    const lbl=document.createElement("div"); lbl.className="lbl"; lbl.textContent=p.type;
     b.append(sym,lbl);
-    b.addEventListener("click", ()=>openModal(p.id));
+    b.addEventListener("click",()=>openModal(p.id));
     board.children[posToIdx(p.pos)].appendChild(b);
   });
   paintPieces(); refreshStatus(); updateProgress();
@@ -461,28 +363,28 @@ function paintPieces(){
   const side = state.side;
   document.querySelectorAll(".piece").forEach(b=>{
     b.classList.remove("red","blue","opponent","answered");
-    const s = b.dataset.side;
+    const s=b.dataset.side;
     b.classList.add(s==="red"?"red":"blue");
     if(s!==side) b.classList.add("opponent");
     if(state.answers[b.dataset.id]?.answered) b.classList.add("answered");
-    if(b.dataset.type==="king" && s===side && !kingUnlocked(side)) b.disabled = true; else if (b.dataset.type==="king" && s===side) b.disabled=false;
+    if(b.dataset.type==="king" && s===side && !kingUnlocked(side)) b.disabled=true; else if(b.dataset.type==="king" && s===side) b.disabled=false;
   });
 }
 function refreshStatus(){
   statusList.textContent="";
-  const side = state.side;
+  const side=state.side;
   START.filter(p=>p.side===side).forEach(p=>{
-    const n = document.createElement("div"); n.textContent = `${p.type.toUpperCase()} ${p.pos}`;
-    const s = document.createElement("div"); const ok = !!state.answers[p.id]?.answered; s.textContent = ok?t("captured"):t("dash"); s.style.color = ok?"var(--ok)":"var(--muted)";
+    const n=document.createElement("div"); n.textContent=`${p.type.toUpperCase()} ${p.pos}`;
+    const s=document.createElement("div"); const ok=!!state.answers[p.id]?.answered; s.textContent=ok?t("captured"):t("dash"); s.style.color=ok?"var(--ok)":"var(--muted)";
     statusList.append(n,s);
   });
 }
 function updateProgress(){
   const answered = Object.keys(state.answers).filter(k=>state.answers[k].answered).length;
-  progressEl.textContent = `${answered}/32`;
+  progressEl.textContent=`${answered}/32`;
 }
 function kingUnlocked(side){
-  const need = {pawn:0,knight:0,bishop:0,rook:0,queen:0};
+  const need={pawn:0,knight:0,bishop:0,rook:0,queen:0};
   START.filter(p=>p.side===side).forEach(p=>{
     if(state.answers[p.id]?.answered && need.hasOwnProperty(p.type)) need[p.type]++;
   });
@@ -490,101 +392,79 @@ function kingUnlocked(side){
 }
 
 /* ===== modal ===== */
-const back = document.getElementById("back");
-const mTitle = document.getElementById("mTitle");
-const mSub = document.getElementById("mSub");
-const mDesc = document.getElementById("mDesc");
-const mBody = document.getElementById("mBody");
-const mBadge = document.getElementById("mBadge");
-const mClose = document.getElementById("mClose");
-const mSend = document.getElementById("mSend");
-const mMsg = document.getElementById("mMsg");
-
 function openModal(id){
-  const piece = START.find(p=>p.id===id); if(!piece) return;
-  const bank = BANK[state.theme] || BANK.red;
-  const pool = bank[piece.type] || [{q:{pt:"Sem pergunta",en:"No question",es:"Sin pregunta"},t:"text"}];
-  const idx = Math.abs(hash(id)) % pool.length;
-  const q = pool[idx];
+  const piece=START.find(p=>p.id===id); if(!piece) return;
+  const bank=(BANK[state.theme]||BANK.red)[piece.type]||[{q:{pt:"Sem pergunta",en:"No question",es:"Sin pregunta"},t:"text"}];
+  const q=bank[Math.abs(hash(id))%bank.length];
 
-  // títulos/descrição conforme idioma
-  const qText = (q.q && q.q[curLang]) || q.q.pt;
-  mTitle.textContent = `${piece.type.toUpperCase()} (${piece.side.toUpperCase()})`;
-  mSub.textContent = `${POINTS[piece.type]} pts • ${piece.pos}`;
-  mDesc.textContent = qText || "—";
-  mBadge.textContent = `${POINTS[piece.type]} pts`;
-  mBody.textContent = ""; mMsg.textContent = "";
+  const qText=(q.q&&q.q[state.lang])||q.q.pt;
+  mTitle.textContent=`${piece.type.toUpperCase()} (${piece.side.toUpperCase()})`;
+  mSub.textContent=`${POINTS[piece.type]} pts • ${piece.pos}`;
+  mDesc.textContent=qText||"—";
+  mBadge.textContent=`${POINTS[piece.type]} pts`;
+  mBody.textContent=""; mMsg.textContent="";
 
   if(q.t==="mcq"){
-    const box = document.createElement("div"); box.className="mcq";
+    const box=document.createElement("div"); box.className="mcq";
     (q.o||[]).forEach((opt,i)=>{
-      const lab = document.createElement("label"); lab.className="opt";
-      const r = document.createElement("input"); r.type="radio"; r.name="mcq"; r.value=String(i);
+      const lab=document.createElement("label"); lab.className="opt";
+      const r=document.createElement("input"); r.type="radio"; r.name="mcq"; r.value=String(i);
       if(state.answers[id]?.value!==undefined && String(state.answers[id].value)===String(i)) r.checked=true;
-      const sp = document.createElement("span"); sp.textContent = (opt[curLang]||opt.pt);
+      const sp=document.createElement("span"); sp.textContent=(opt[state.lang]||opt.pt);
       lab.append(r,sp); box.appendChild(lab);
     });
     mBody.appendChild(box);
   }else{
-    const ta = document.createElement("textarea"); ta.className="ta"; ta.maxLength=400; ta.placeholder={pt:"Responda aqui (máx. 200 caracteres)",en:"Answer here (max 200 chars)",es:"Responde aquí (máx. 200 caracteres)"}[curLang];
-    if(state.answers[id]?.value) ta.value = String(state.answers[id].value).slice(0,200);
+    const ta=document.createElement("textarea"); ta.className="ta"; ta.maxLength=400; ta.placeholder={pt:"Responda aqui (máx. 200 caracteres)",en:"Answer here (max 200 chars)",es:"Responde aquí (máx. 200 caracteres)"}[state.lang];
+    if(state.answers[id]?.value) ta.value=String(state.answers[id].value).slice(0,200);
     mBody.appendChild(ta);
   }
-
-  const guide = document.createElement("div"); guide.className="p-muted"; guide.style.marginTop="8px";
-  guide.textContent = (piece.type==="king") ? t("modalGuideKing") : t("modalGuideGeneric");
+  const guide=document.createElement("div"); guide.className="p-muted"; guide.style.marginTop="8px";
+  guide.textContent = (piece.type==="king") ? I18N[state.lang].modalGuideKing : I18N[state.lang].modalGuideGeneric;
   mBody.appendChild(guide);
 
-  mSend.onclick = ()=>submitAnswer(id, piece, q);
-  mClose.onclick = closeModal;
+  mSend.onclick=()=>submitAnswer(id,piece,q);
+  mClose.onclick=closeModal;
   back.style.display="flex"; back.setAttribute("aria-hidden","false");
 }
 function closeModal(){ back.style.display="none"; back.setAttribute("aria-hidden","true"); mBody.textContent=""; mMsg.textContent=""; mSend.onclick=null; }
-
-/* ===== validação (com ofuscação do gabarito) ===== */
-function decodeAnswer(ans_enc){ return ans_enc ^ OBF_KEY; } // simples, porém não explícito no source
-function submitAnswer(id, piece, q){
-  let value = null;
+function submitAnswer(id,piece,q){
+  let value=null;
   if(q.t==="mcq"){
-    const sel = document.querySelector('input[name="mcq"]:checked'); if(!sel){ mMsg.textContent=t("choose"); return; }
-    value = parseInt(sel.value,10);
+    const sel=document.querySelector('input[name="mcq"]:checked'); if(!sel){ mMsg.textContent=t("choose"); return; }
+    value=parseInt(sel.value,10);
     if(typeof q.ans_enc==="number"){
-      const correct = decodeAnswer(q.ans_enc);
-      mMsg.textContent = (value===correct) ? t("correct") : t("ok");
-    }else{
-      mMsg.textContent = t("ok");
-    }
+      const correct=decodeAnswer(q.ans_enc);
+      mMsg.textContent=(value===correct)?t("correct"):t("ok");
+    }else mMsg.textContent=t("ok");
   }else{
-    const ta = document.querySelector(".ta"); if(!ta || !ta.value.trim()){ mMsg.textContent=t("write"); return; }
-    value = ta.value.trim().slice(0,200);
-    mMsg.textContent = t("ok");
+    const ta=document.querySelector(".ta"); if(!ta||!ta.value.trim()){ mMsg.textContent=t("write"); return; }
+    value=ta.value.trim().slice(0,200);
+    mMsg.textContent=t("ok");
   }
-  state.answers[id] = {answered:true, value, pts:POINTS[piece.type]};
-  storeSet("state", state);
+  state.answers[id]={answered:true,value,pts:POINTS[piece.type]};
+  storeSet("state",state);
   paintPieces(); updateProgress(); refreshStatus();
-  setTimeout(closeModal, 800);
+  setTimeout(closeModal,800);
 }
 
 /* ===== eventos ===== */
-selLang.addEventListener("change", e=>{
-  curLang = e.target.value; state.lang = curLang; storeSet("state", state); applyI18N();
-});
-selTheme.addEventListener("change", e=>{ state.theme=e.target.value; storeSet("state", state); });
-selSide.addEventListener("change", e=>{ state.side=e.target.value; storeSet("state", state); paintPieces(); refreshStatus(); });
+selLang.addEventListener("change", e=>{ state.lang=e.target.value; storeSet("state",state); applyI18N(); });
+selTheme.addEventListener("change", e=>{ state.theme=e.target.value; storeSet("state",state); });
+selSide.addEventListener("change", e=>{ state.side=e.target.value; storeSet("state",state); paintPieces(); refreshStatus(); });
 btnReset.addEventListener("click", ()=>{
-  if(confirm({pt:"Resetar este progresso?",en:"Reset this progress?",es:"¿Reiniciar este progreso?"}[curLang]||"Reset?")){
+  if(confirm({pt:"Resetar este progresso?",en:"Reset this progress?",es:"¿Reiniciar este progreso?"}[state.lang]||"Reset?")){
     state={answers:{},theme:selTheme.value,side:selSide.value,lang:selLang.value};
-    storeSet("state", state);
+    storeSet("state",state);
     paintPieces(); refreshStatus(); updateProgress();
-    alert({pt:"Ok!",en:"Done!",es:"¡Listo!"}[curLang]||"Ok");
+    alert({pt:"Ok!",en:"Done!",es:"¡Listo!"}[state.lang]||"Ok");
   }
 });
 btnPersist.addEventListener("click", ()=>{
-  USE_LOCAL = !USE_LOCAL;
+  USE_LOCAL=!USE_LOCAL;
   btnPersist.setAttribute("aria-pressed", USE_LOCAL ? "true":"false");
   btnPersist.textContent = USE_LOCAL ? t("persistOn") : t("persistOff");
-  // migra estado atual para o armazenamento ativo
-  storeSet("state", state);
+  storeSet("state",state);
 });
 
 /* ===== init ===== */
