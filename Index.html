@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Chess Red — Questionário Gamificado</title>
+
+<!-- CSP forte (pode mover para header no servidor) -->
+<meta http-equiv="Content-Security-Policy"
+content="default-src 'self';
+         script-src 'self' 'nonce-a1b2c3';
+         style-src  'self' 'nonce-s1t2y3';
+         img-src    'self' data:;
+         connect-src 'none';
+         object-src 'none';
+         base-uri 'none';
+         form-action 'none';
+         frame-ancestors 'none'">
+<meta name="referrer" content="no-referrer">
+
+<style nonce="s1t2y3">
+  :root{
+    --size:720px;
+    --red:#d9464a;
+    --blue:#2563eb;
+    --bg:#071123;
+    --card:#0b1220;
+    --muted:#94a3b8;
+    --light:#f0d9b5;
+    --dark:#b58863;
+    --ok:#86efac;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,system-ui,Roboto,Arial;background:linear-gradient(180deg,#04102a,#071026);color:#e6eef8;min-height:100vh}
+  .wrap{max-width:1200px;margin:22px auto;padding:18px}
+  .header{display:flex;gap:14px;align-items:center}
+  .logo{width:64px;height:64px;border-radius:10px;background:linear-gradient(135deg,var(--red),#fb923c);display:flex;align-items:center;justify-content:center;font-weight:800}
+  .h1{margin:0;font-size:22px}
+  .p-muted{margin:0;color:var(--muted);font-size:13px}
+  .controls{display:flex;gap:12px;align-items:center;margin-top:12px;flex-wrap:wrap}
+  .select,.btn{padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.03);color:inherit}
+  .btn{cursor:pointer}
+  .main{display:flex;gap:18px;margin-top:18px;flex-wrap:wrap}
+  .board{width:var(--size);display:grid;grid-template-columns:repeat(8,1fr);grid-auto-rows:calc(var(--size)/8);border-radius:8px;overflow:hidden;border:6px solid rgba(255,255,255,0.05);box-shadow:0 12px 40px rgba(2,6,23,0.6)}
+  .square{position:relative;display:flex;align-items:center;justify-content:center;font-weight:700}
+  .sqL{background:var(--light);color:#222}
+  .sqD{background:var(--dark);color:#111}
+  .corner{position:absolute;left:6px;top:6px;font-size:10px;opacity:.5}
+  .piece{width:86%;height:86%;border-radius:8px;border:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:inset 0 -6px 14px rgba(0,0,0,.12);transition:transform .12s,box-shadow .12s}
+  .piece:focus{outline:3px solid rgba(255,215,125,.14);outline-offset:3px}
+  .piece:hover{transform:translateY(-4px)}
+  .sym{font-size:20px}
+  .lbl{font-size:11px;margin-top:6px;color:rgba(0,0,0,0.6)}
+  .red{background:linear-gradient(90deg,#ffdddd,#ffdede);color:#4b0b0b}
+  .blue{background:linear-gradient(90deg,#dbe9ff,#cbe4ff);color:#032a5e}
+  .opponent{opacity:.92;filter:grayscale(.03)}
+  .answered{box-shadow:0 0 0 3px rgba(134,239,172,.2), 0 6px 20px rgba(0,0,0,.45)}
+  .aside{min-width:300px;max-width:360px}
+  .card{background:var(--card);padding:14px;border-radius:10px;border:1px solid rgba(255,255,255,0.06)}
+  .gridStat{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:8px}
+  .badge{display:inline-block;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.06);font-weight:700}
+  .footer{margin-top:12px;display:flex;justify-content:space-between;gap:12px}
+  .muted{color:var(--muted);font-size:13px}
+  @media(max-width:980px){.main{flex-direction:column;align-items:center}.board{width:100%;grid-auto-rows:calc((100vw - 40px)/8)}.aside{width:100%}}
+  /* modal */
+  .back{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,.6);z-index:80;padding:18px}
+  .modal{width:100%;max-width:760px;background:#071126;padding:18px;border-radius:12px;border:1px solid rgba(255,255,255,.06)}
+  .mHead{display:flex;justify-content:space-between;align-items:center}
+  .mTitle{margin:0}
+  .mSub{margin:6px 0 0 0}
+  .mBody{margin-top:12px}
+  .mcq{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+  .opt{display:flex;gap:8px;align-items:center;padding:8px;border-radius:8px;background:rgba(255,255,255,.04);cursor:pointer}
+  .ta{width:100%;min-height:100px;padding:10px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);color:inherit}
+  .row{display:flex;gap:8px;align-items:center;margin-top:12px}
+</style>
+</head>
+<body>
+  <div class="wrap" aria-live="polite">
+    <div class="header">
+      <div class="logo" aria-hidden="true" style="justify-content:center;align-items:center;display:flex">CR</div>
+      <div>
+        <h1 class="h1" data-i18n="title">Chess Red — Questionário Gamificado</h1>
+        <p class="p-muted" data-i18n="subtitle">Cada peça é uma pergunta. Escolha o tema e seu lado. Responda e capture peças — o Rei desbloqueia no fim.</p>
+      </div>
+    </div>
+
+    <div class="controls" role="region" aria-label="Controles">
+      <label class="p-muted" data-i18n="lblLang">Idioma:
+        <select id="selLang" class="select" aria-label="Idioma">
+          <option value="pt">Português</option>
+          <option value="en">English</option>
+          <option value="es">Español</option>
+        </select>
+      </label>
+
+      <label class="p-muted" data-i18n="lblTheme">Tema:
+        <select id="selTheme" class="select" aria-label="Tema">
+          <option value="red">Red Team</option>
+          <option value="blue">Blue Team</option>
+        </select>
+      </label>
+
+      <label class="p-muted" data-i18n="lblSide">Lado:
+        <select id="selSide" class="select" aria-label="Lado">
+          <option value="red" data-i18n="sideRed">Red (vermelho)</option>
+          <option value="blue" data-i18n="sideBlue">Blue (azul)</option>
+        </select>
+      </label>
+
+      <button id="btnPersist" class="btn" type="button" aria-pressed="false" title="Salvar neste dispositivo" data-i18n="persistOff">Salvar neste dispositivo: OFF</button>
+      <button id="btnReset" class="btn" type="button" data-i18n="reset">Resetar progresso</button>
+      <div class="p-muted" style="margin-left:auto"><span data-i18n="progress">Progresso</span>: <span id="progress">0/32</span></div>
+    </div>
+
+    <div class="main">
+      <div class="board" id="board" role="grid" aria-label="Tabuleiro"></div>
+
+      <aside class="aside">
+        <div class="card">
+          <strong data-i18n="rulesTitle">Regras & Progresso</strong>
+          <p class="p-muted" style="margin-top:8px" data-i18n="rulesDesc">
+            Responda para capturar. O Rei só libera após: 1 Peão, 1 Cavalo, 1 Bispo, 1 Torre e a Rainha do seu lado respondidos.
+          </p>
+          <div class="p-muted" style="margin-top:6px" data-i18n="yourSide">Seu lado:</div>
+          <div id="statusList" class="gridStat"></div>
+
+          <div style="margin-top:10px">
+            <div class="p-muted" data-i18n="score">Pontuação</div>
+            <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+              <div class="badge" data-i18n="ptsKing">Rei · 500</div>
+              <div class="badge" data-i18n="ptsQueen">Rainha · 350</div>
+              <div class="badge" data-i18n="ptsRook">Torre · 200</div>
+              <div class="badge" data-i18n="ptsBishop">Bispo · 150</div>
+              <div class="badge" data-i18n="ptsKnight">Cavalo · 150</div>
+              <div class="badge" data-i18n="ptsPawn">Peão · 50</div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="footer">
+      <div class="muted" data-i18n="legal">© Chess Red — Questionário. Sem coleta de dados. Sem cookies.</div>
+      <div class="muted" data-i18n="sessions">Sessões independentes por aba/usuário.</div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="back" id="back" role="dialog" aria-hidden="true">
+    <div class="modal" role="document" aria-modal="true">
+      <div class="mHead">
+        <div>
+          <h2 id="mTitle" class="mTitle">Título</h2>
+          <div id="mSub" class="mSub p-muted">Categoria • pontos • posição</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div id="mBadge" class="badge">—</div>
+          <button id="mClose" class="btn" type="button" data-i18n="close">Fechar</button>
+        </div>
+      </div>
+
+      <div class="mBody">
+        <div id="mDesc" class="p-muted">Descrição</div>
+        <div id="mBody" class="mBody"></div>
+        <div class="row">
+          <button id="mSend" class="btn" type="button" data-i18n="send">Enviar resposta</button>
+          <div id="mMsg" class="p-muted"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script nonce="a1b2c3">
+"use strict";
+/* ===== Segurança & Isolamento =====
+   - Sem cookies; sem rede; connect-src 'none'.
+   - sessionStorage por padrão => cada aba/usuário é independente.
+   - Toggle para localStorage (persistência voluntária).
+   - Ofuscação: respostas não aparecem como índices claros no source.
+*/
+const DEPLOYMENT_ID = "chess-red-qa-002";
+let USE_LOCAL = false; // sessão por padrão
+const OBF_KEY = 0xC7;  // chave fixa p/ ofuscação (XOR). Leve, não inviolável, mas oculta o índice em claro.
+
+function storeGet(key, fallback){
+  const s = USE_LOCAL ? localStorage : sessionStorage;
+  try{ return JSON.parse(s.getItem(`${DEPLOYMENT_ID}:${key}`) || JSON.stringify(fallback)); }
+  catch{ return fallback; }
+}
+function storeSet(key, value){
+  const s = USE_LOCAL ? localStorage : sessionStorage;
+  s.setItem(`${DEPLOYMENT_ID}:${key}`, JSON.stringify(value));
+}
+
+const I18N = {
+  pt: {
+    title:"Chess Red — Questionário Gamificado",
+    subtitle:"Cada peça é uma pergunta. Escolha o tema e seu lado. Responda e capture peças — o Rei desbloqueia no fim.",
+    lblLang:"Idioma:", lblTheme:"Tema:", lblSide:"Lado:", sideRed:"Red (vermelho)", sideBlue:"Blue (azul)",
+    persistOff:"Salvar neste dispositivo: OFF", persistOn:"Salvar neste dispositivo: ON",
+    reset:"Resetar progresso", progress:"Progresso",
+    rulesTitle:"Regras & Progresso",
+    rulesDesc:"Responda para capturar. O Rei só libera após: 1 Peão, 1 Cavalo, 1 Bispo, 1 Torre e a Rainha do seu lado respondidos.",
+    yourSide:"Seu lado:", score:"Pontuação",
+    ptsKing:"Rei · 500", ptsQueen:"Rainha · 350", ptsRook:"Torre · 200", ptsBishop:"Bispo · 150", ptsKnight:"Cavalo · 150", ptsPawn:"Peão · 50",
+    legal:"© Chess Red — Questionário. Sem coleta de dados. Sem cookies.",
+    sessions:"Sessões independentes por aba/usuário.",
+    close:"Fechar", send:"Enviar resposta",
+    choose:"Escolha uma opção.", write:"Escreva uma resposta.", ok:"Registrado.", correct:"Correta!", captured:"capturada", dash:"-",
+    modalGuideGeneric:"Reflita sobre prioridades e escolhas estratégicas.",
+    modalGuideKing:"Síntese final — responda com clareza."
+  },
+  en: {
+    title:"Chess Red — Gamified Questionnaire",
+    subtitle:"Each piece is a question. Choose theme and side. Answer to capture — the King unlocks at the end.",
+    lblLang:"Language:", lblTheme:"Theme:", lblSide:"Side:", sideRed:"Red", sideBlue:"Blue",
+    persistOff:"Save on this device: OFF", persistOn:"Save on this device: ON",
+    reset:"Reset progress", progress:"Progress",
+    rulesTitle:"Rules & Progress",
+    rulesDesc:"Answer to capture. King unlocks after: 1 Pawn, 1 Knight, 1 Bishop, 1 Rook and the Queen on your side are answered.",
+    yourSide:"Your side:", score:"Score",
+    ptsKing:"King · 500", ptsQueen:"Queen · 350", ptsRook:"Rook · 200", ptsBishop:"Bishop · 150", ptsKnight:"Knight · 150", ptsPawn:"Pawn · 50",
+    legal:"© Chess Red — Questionnaire. No data collection. No cookies.",
+    sessions:"Independent sessions per tab/user.",
+    close:"Close", send:"Submit answer",
+    choose:"Choose an option.", write:"Write an answer.", ok:"Recorded.", correct:"Correct!", captured:"captured", dash:"-",
+    modalGuideGeneric:"Reflect on priorities and strategic choices.",
+    modalGuideKing:"Final synthesis — be concise and clear."
+  },
+  es: {
+    title:"Chess Red — Cuestionario Gamificado",
+    subtitle:"Cada pieza es una pregunta. Elige tema y bando. Responde para capturar — el Rey se libera al final.",
+    lblLang:"Idioma:", lblTheme:"Tema:", lblSide:"Bando:", sideRed:"Red (rojo)", sideBlue:"Blue (azul)",
+    persistOff:"Guardar en este dispositivo: OFF", persistOn:"Guardar en este dispositivo: ON",
+    reset:"Reiniciar progreso", progress:"Progreso",
+    rulesTitle:"Reglas y Progreso",
+    rulesDesc:"Responde para capturar. El Rey se habilita después de: 1 Peón, 1 Caballo, 1 Alfil, 1 Torre y la Reina de tu bando contestados.",
+    yourSide:"Tu bando:", score:"Puntuación",
+    ptsKing:"Rey · 500", ptsQueen:"Reina · 350", ptsRook:"Torre · 200", ptsBishop:"Alfil · 150", ptsKnight:"Caballo · 150", ptsPawn:"Peón · 50",
+    legal:"© Chess Red — Cuestionario. Sin recolección de datos. Sin cookies.",
+    sessions:"Sesiones independientes por pestaña/usuario.",
+    close:"Cerrar", send:"Enviar respuesta",
+    choose:"Elige una opción.", write:"Escribe una respuesta.", ok:"Registrado.", correct:"¡Correcta!", captured:"capturada", dash:"-",
+    modalGuideGeneric:"Reflexiona sobre prioridades y elecciones estratégicas.",
+    modalGuideKing:"Síntesis final — responde con claridad."
+  }
+};
+
+const POINTS = { pawn:50, knight:150, bishop:150, rook:200, queen:350, king:500 };
+const START = (()=>{const A=[];for(let i=0;i<8;i++){A.push({id:`r_pawn_${i+1}`,side:"red",type:"pawn",pos:String.fromCharCode(97+i)+2,label:"P"});A.push({id:`b_pawn_${i+1}`,side:"blue",type:"pawn",pos:String.fromCharCode(97+i)+7,label:"p"});}A.push({id:"r_rook_a",side:"red",type:"rook",pos:"a1",label:"R"},{id:"r_rook_h",side:"red",type:"rook",pos:"h1",label:"R"},{id:"b_rook_a",side:"blue",type:"rook",pos:"a8",label:"r"},{id:"b_rook_h",side:"blue",type:"rook",pos:"h8",label:"r"},{id:"r_knight_b",side:"red",type:"knight",pos:"b1",label:"N"},{id:"r_knight_g",side:"red",type:"knight",pos:"g1",label:"N"},{id:"b_knight_b",side:"blue",type:"knight",pos:"b8",label:"n"},{id:"b_knight_g",side:"blue",type:"knight",pos:"g8",label:"n"},{id:"r_bishop_c",side:"red",type:"bishop",pos:"c1",label:"B"},{id:"r_bishop_f",side:"red",type:"bishop",pos:"f1",label:"B"},{id:"b_bishop_c",side:"blue",type:"bishop",pos:"c8",label:"b"},{id:"b_bishop_f",side:"blue",type:"bishop",pos:"f8",label:"b"},{id:"r_queen",side:"red",type:"queen",pos:"d1",label:"Q"},{id:"b_queen",side:"blue",type:"queen",pos:"d8",label:"q"},{id:"r_king",side:"red",type:"king",pos:"e1",label:"K"},{id:"b_king",side:"blue",type:"king",pos:"e8",label:"k"});return A;})();
+
+/* ===== Banco de perguntas (3 idiomas) =====
+   - Para MCQ: usamos ans_enc (índice correto XOR com OBF_KEY) — não há "answer" em claro.
+   - Para texto: sem gabarito.
+*/
+const BANK = {
+  red:{
+    pawn:[{
+      q:{pt:"Qual é a prioridade inicial no reconhecimento (Red)?",
+         en:"What is the initial priority in Red Team recon?",
+         es:"¿Cuál es la prioridad inicial en el reconocimiento Red Team?"},
+      t:"mcq",
+      o:[
+        {pt:"Scan agressivo", en:"Aggressive scanning", es:"Escaneo agresivo"},
+        {pt:"Mapear pegadas públicas (DNS/certs/repos)", en:"Map public footprints (DNS/certs/repos)", es:"Mapear huellas públicas (DNS/certs/repos)"},
+        {pt:"Phishing imediato", en:"Immediate phishing", es:"Phishing inmediato"},
+        {pt:"Credenciais padrão", en:"Default credentials", es:"Credenciales por defecto"}
+      ],
+      ans_enc:(1 ^ OBF_KEY) /* gabarito: opção 1 */
+    }],
+    knight:[{
+      q:{pt:"Achou SSRF. Próximo passo?",
+         en:"Found SSRF. Next step?",
+         es:"Encontraste SSRF. ¿Siguiente paso?"},
+      t:"mcq",
+      o:[
+        {pt:"Metadata 169.254.169.254", en:"Metadata 169.254.169.254", es:"Metadata 169.254.169.254"},
+        {pt:"Brute force", en:"Brute force", es:"Fuerza bruta"},
+        {pt:"Payload destrutivo", en:"Destructive payload", es:"Payload destructivo"},
+        {pt:"Post público", en:"Public post", es:"Publicación pública"}
+      ],
+      ans_enc:(0 ^ OBF_KEY)
+    }],
+    bishop:[{
+      q:{pt:"Token em pipeline.bak. Antes de usar?",
+         en:"Token in pipeline.bak. Before using it?",
+         es:"Token en pipeline.bak. ¿Antes de usarlo?"},
+      t:"mcq",
+      o:[
+        {pt:"Usar já", en:"Use it right away", es:"Usarlo ya"},
+        {pt:"Correlacionar com artefatos", en:"Correlate with artifacts", es:"Correlacionar con artefactos"},
+        {pt:"Publicar", en:"Publish it", es:"Publicarlo"},
+        {pt:"Ignorar", en:"Ignore", es:"Ignorar"}
+      ],
+      ans_enc:(1 ^ OBF_KEY)
+    }],
+    rook:[{
+      q:{pt:"Admin default. Ação correta?",
+         en:"Admin default. Correct action?",
+         es:"Admin por defecto. ¿Acción correcta?"},
+      t:"mcq",
+      o:[
+        {pt:"Usar e documentar", en:"Use and document", es:"Usar y documentar"},
+        {pt:"Publicar credencial", en:"Publish credential", es:"Publicar credencial"},
+        {pt:"Ignorar", en:"Ignore", es:"Ignorar"},
+        {pt:"Derrubar", en:"Take it down", es:"Derribarlo"}
+      ],
+      ans_enc:(0 ^ OBF_KEY)
+    }],
+    queen:[{
+      q:{pt:"Falha crítica no gateway. Priorizar?",
+         en:"Critical gateway flaw. Prioritize?",
+         es:"Falla crítica en el gateway. ¿Priorizar?"},
+      t:"mcq",
+      o:[
+        {pt:"Explorar sem controle", en:"Exploit without control", es:"Explotar sin control"},
+        {pt:"Reportar e mitigar", en:"Report and mitigate", es:"Reportar y mitigar"},
+        {pt:"Vender info", en:"Sell info", es:"Vender info"},
+        {pt:"Ignorar", en:"Ignore", es:"Ignorar"}
+      ],
+      ans_enc:(1 ^ OBF_KEY)
+    }],
+    king:[{
+      q:{pt:"Em até 200 chars: como provar risco estratégico com uma campanha Red Team?",
+         en:"In up to 200 chars: how would a Red Team campaign prove strategic risk?",
+         es:"En hasta 200 caracteres: ¿cómo demostraría riesgo estratégico una campaña Red Team?"},
+      t:"text"
+    }]
+  },
+  blue:{
+    pawn:[{
+      q:{pt:"Prioridade inicial (Blue)?",
+         en:"Initial priority (Blue)?",
+         es:"Prioridad inicial (Blue)?"},
+      t:"mcq",
+      o:[
+        {pt:"Ignorar logs", en:"Ignore logs", es:"Ignorar logs"},
+        {pt:"Mapear ativos e coberturas", en:"Map assets & detections", es:"Mapear activos y coberturas"},
+        {pt:"Desligar tudo", en:"Shut everything down", es:"Apagar todo"},
+        {pt:"Expor admin", en:"Expose admin", es:"Exponer admin"}
+      ],
+      ans_enc:(1 ^ OBF_KEY)
+    }],
+    knight:[{
+      q:{pt:"WAF mostra SSRF attempts. Ação?",
+         en:"WAF shows SSRF attempts. Action?",
+         es:"WAF muestra intentos de SSRF. ¿Acción?"},
+      t:"mcq",
+      o:[
+        {pt:"Bloquear fonte e analisar pivot", en:"Block source and analyze pivot", es:"Bloquear fuente y analizar pivot"},
+        {pt:"Nada", en:"Do nothing", es:"Nada"},
+        {pt:"Publicar logs", en:"Publish logs", es:"Publicar logs"},
+        {pt:"Remover WAF", en:"Remove WAF", es:"Quitar WAF"}
+      ],
+      ans_enc:(0 ^ OBF_KEY)
+    }],
+    bishop:[{
+      q:{pt:"Conta de serviço suspeita no CI. Primeiro passo?",
+         en:"Suspicious service account in CI. First step?",
+         es:"Cuenta de servicio sospechosa en CI. ¿Primer paso?"},
+      t:"mcq",
+      o:[
+        {pt:"Investigar e isolar", en:"Investigate and isolate", es:"Investigar y aislar"},
+        {pt:"Ignorar", en:"Ignore", es:"Ignorar"},
+        {pt:"Reiniciar", en:"Reboot", es:"Reiniciar"},
+        {pt:"Publicar", en:"Publish", es:"Publicar"}
+      ],
+      ans_enc:(0 ^ OBF_KEY)
+    }],
+    rook:[{
+      q:{pt:"Perímetro seguro?",
+         en:"Secure perimeter?",
+         es:"Perímetro seguro?"},
+      t:"mcq",
+      o:[
+        {pt:"Segmentação + WAF rules", en:"Segmentation + WAF rules", es:"Segmentación + reglas WAF"},
+        {pt:"Abrir portas", en:"Open ports", es:"Abrir puertos"},
+        {pt:"Ignorar TLS", en:"Ignore TLS", es:"Ignorar TLS"},
+        {pt:"Sem monitoramento", en:"No monitoring", es:"Sin monitoreo"}
+      ],
+      ans_enc:(0 ^ OBF_KEY)
+    }],
+    queen:[{
+      q:{pt:"Vários serviços afetados. Priorização?",
+         en:"Multiple services affected. Prioritization?",
+         es:"Varios servicios afectados. ¿Priorización?"},
+      t:"mcq",
+      o:[
+        {pt:"Foco em críticos & conter lateral", en:"Focus on criticals & contain lateral", es:"Foco en críticos y contener lateral"},
+        {pt:"Parar tudo", en:"Stop everything", es:"Parar todo"},
+        {pt:"Aviso público", en:"Public notice", es:"Aviso público"},
+        {pt:"Ignorar", en:"Ignore", es:"Ignorar"}
+      ],
+      ans_enc:(0 ^ OBF_KEY)
+    }],
+    king:[{
+      q:{pt:"Em até 200 chars: como provar ao board que defesa reduziu risco?",
+         en:"In up to 200 chars: how to prove to the board that defense reduced risk?",
+         es:"En hasta 200 caracteres: ¿cómo probar al directorio que la defensa redujo el riesgo?"},
+      t:"text"
+    }]
+  }
+};
+
+/* ===== i18n helpers ===== */
+let curLang = storeGet("state", {lang:"pt"}).lang || "pt";
+function t(key){ return (I18N[curLang] && I18N[curLang][key]) || I18N["pt"][key] || key; }
+function applyI18N(){
+  document.querySelectorAll("[data-i18n]").forEach(el=>{
+    const key = el.getAttribute("data-i18n");
+    el.textContent = t(key);
+  });
+  // também atualiza labels das opções do <select> side
+  const sideRed = document.querySelector('option[value="red"][data-i18n="sideRed"]');
+  const sideBlue= document.querySelector('option[value="blue"][data-i18n="sideBlue"]');
+  if(sideRed) sideRed.textContent = t("sideRed");
+  if(sideBlue) sideBlue.textContent = t("sideBlue");
+}
+
+/* ===== estado ===== */
+let state = storeGet("state", {answers:{}, theme:"red", side:"red", lang: curLang});
+const board = document.getElementById("board");
+const statusList = document.getElementById("statusList");
+const progressEl = document.getElementById("progress");
+const selLang = document.getElementById("selLang");
+const selTheme = document.getElementById("selTheme");
+const selSide = document.getElementById("selSide");
+const btnReset = document.getElementById("btnReset");
+const btnPersist = document.getElementById("btnPersist");
+selLang.value = state.lang; selTheme.value = state.theme; selSide.value = state.side;
+
+/* ===== util ===== */
+function posToIdx(p){const c=p.charCodeAt(0)-97;const r=parseInt(p[1],10)-1;return (7-r)*8+c;}
+function hash(s){let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;}return h;}
+
+/* ===== board ===== */
+function buildBoard(){
+  board.textContent="";
+  for(let r=8;r>=1;r--){
+    for(let c=0;c<8;c++){
+      const sq = document.createElement("div");
+      sq.className = "square " + (((c+r)%2===0) ? "sqL":"sqD");
+      const pos = String.fromCharCode(97+c)+r;
+      const label = document.createElement("div"); label.className="corner"; label.textContent=pos; sq.appendChild(label);
+      board.appendChild(sq);
+    }
+  }
+  START.forEach(p=>{
+    const b = document.createElement("button");
+    b.type="button"; b.className="piece"; b.dataset.id=p.id; b.dataset.side=p.side; b.dataset.type=p.type; b.dataset.pos=p.pos;
+    const sym = document.createElement("div"); sym.className="sym"; sym.textContent = ({king:"♚",queen:"♛",rook:"♜",bishop:"♝",knight:"♞"})[p.type] || "♟";
+    const lbl = document.createElement("div"); lbl.className="lbl"; lbl.textContent=p.type;
+    b.append(sym,lbl);
+    b.addEventListener("click", ()=>openModal(p.id));
+    board.children[posToIdx(p.pos)].appendChild(b);
+  });
+  paintPieces(); refreshStatus(); updateProgress();
+}
+function paintPieces(){
+  const side = state.side;
+  document.querySelectorAll(".piece").forEach(b=>{
+    b.classList.remove("red","blue","opponent","answered");
+    const s = b.dataset.side;
+    b.classList.add(s==="red"?"red":"blue");
+    if(s!==side) b.classList.add("opponent");
+    if(state.answers[b.dataset.id]?.answered) b.classList.add("answered");
+    if(b.dataset.type==="king" && s===side && !kingUnlocked(side)) b.disabled = true; else if (b.dataset.type==="king" && s===side) b.disabled=false;
+  });
+}
+function refreshStatus(){
+  statusList.textContent="";
+  const side = state.side;
+  START.filter(p=>p.side===side).forEach(p=>{
+    const n = document.createElement("div"); n.textContent = `${p.type.toUpperCase()} ${p.pos}`;
+    const s = document.createElement("div"); const ok = !!state.answers[p.id]?.answered; s.textContent = ok?t("captured"):t("dash"); s.style.color = ok?"var(--ok)":"var(--muted)";
+    statusList.append(n,s);
+  });
+}
+function updateProgress(){
+  const answered = Object.keys(state.answers).filter(k=>state.answers[k].answered).length;
+  progressEl.textContent = `${answered}/32`;
+}
+function kingUnlocked(side){
+  const need = {pawn:0,knight:0,bishop:0,rook:0,queen:0};
+  START.filter(p=>p.side===side).forEach(p=>{
+    if(state.answers[p.id]?.answered && need.hasOwnProperty(p.type)) need[p.type]++;
+  });
+  return need.pawn>=1 && need.knight>=1 && need.bishop>=1 && need.rook>=1 && need.queen>=1;
+}
+
+/* ===== modal ===== */
+const back = document.getElementById("back");
+const mTitle = document.getElementById("mTitle");
+const mSub = document.getElementById("mSub");
+const mDesc = document.getElementById("mDesc");
+const mBody = document.getElementById("mBody");
+const mBadge = document.getElementById("mBadge");
+const mClose = document.getElementById("mClose");
+const mSend = document.getElementById("mSend");
+const mMsg = document.getElementById("mMsg");
+
+function openModal(id){
+  const piece = START.find(p=>p.id===id); if(!piece) return;
+  const bank = BANK[state.theme] || BANK.red;
+  const pool = bank[piece.type] || [{q:{pt:"Sem pergunta",en:"No question",es:"Sin pregunta"},t:"text"}];
+  const idx = Math.abs(hash(id)) % pool.length;
+  const q = pool[idx];
+
+  // títulos/descrição conforme idioma
+  const qText = (q.q && q.q[curLang]) || q.q.pt;
+  mTitle.textContent = `${piece.type.toUpperCase()} (${piece.side.toUpperCase()})`;
+  mSub.textContent = `${POINTS[piece.type]} pts • ${piece.pos}`;
+  mDesc.textContent = qText || "—";
+  mBadge.textContent = `${POINTS[piece.type]} pts`;
+  mBody.textContent = ""; mMsg.textContent = "";
+
+  if(q.t==="mcq"){
+    const box = document.createElement("div"); box.className="mcq";
+    (q.o||[]).forEach((opt,i)=>{
+      const lab = document.createElement("label"); lab.className="opt";
+      const r = document.createElement("input"); r.type="radio"; r.name="mcq"; r.value=String(i);
+      if(state.answers[id]?.value!==undefined && String(state.answers[id].value)===String(i)) r.checked=true;
+      const sp = document.createElement("span"); sp.textContent = (opt[curLang]||opt.pt);
+      lab.append(r,sp); box.appendChild(lab);
+    });
+    mBody.appendChild(box);
+  }else{
+    const ta = document.createElement("textarea"); ta.className="ta"; ta.maxLength=400; ta.placeholder={pt:"Responda aqui (máx. 200 caracteres)",en:"Answer here (max 200 chars)",es:"Responde aquí (máx. 200 caracteres)"}[curLang];
+    if(state.answers[id]?.value) ta.value = String(state.answers[id].value).slice(0,200);
+    mBody.appendChild(ta);
+  }
+
+  const guide = document.createElement("div"); guide.className="p-muted"; guide.style.marginTop="8px";
+  guide.textContent = (piece.type==="king") ? t("modalGuideKing") : t("modalGuideGeneric");
+  mBody.appendChild(guide);
+
+  mSend.onclick = ()=>submitAnswer(id, piece, q);
+  mClose.onclick = closeModal;
+  back.style.display="flex"; back.setAttribute("aria-hidden","false");
+}
+function closeModal(){ back.style.display="none"; back.setAttribute("aria-hidden","true"); mBody.textContent=""; mMsg.textContent=""; mSend.onclick=null; }
+
+/* ===== validação (com ofuscação do gabarito) ===== */
+function decodeAnswer(ans_enc){ return ans_enc ^ OBF_KEY; } // simples, porém não explícito no source
+function submitAnswer(id, piece, q){
+  let value = null;
+  if(q.t==="mcq"){
+    const sel = document.querySelector('input[name="mcq"]:checked'); if(!sel){ mMsg.textContent=t("choose"); return; }
+    value = parseInt(sel.value,10);
+    if(typeof q.ans_enc==="number"){
+      const correct = decodeAnswer(q.ans_enc);
+      mMsg.textContent = (value===correct) ? t("correct") : t("ok");
+    }else{
+      mMsg.textContent = t("ok");
+    }
+  }else{
+    const ta = document.querySelector(".ta"); if(!ta || !ta.value.trim()){ mMsg.textContent=t("write"); return; }
+    value = ta.value.trim().slice(0,200);
+    mMsg.textContent = t("ok");
+  }
+  state.answers[id] = {answered:true, value, pts:POINTS[piece.type]};
+  storeSet("state", state);
+  paintPieces(); updateProgress(); refreshStatus();
+  setTimeout(closeModal, 800);
+}
+
+/* ===== eventos ===== */
+selLang.addEventListener("change", e=>{
+  curLang = e.target.value; state.lang = curLang; storeSet("state", state); applyI18N();
+});
+selTheme.addEventListener("change", e=>{ state.theme=e.target.value; storeSet("state", state); });
+selSide.addEventListener("change", e=>{ state.side=e.target.value; storeSet("state", state); paintPieces(); refreshStatus(); });
+btnReset.addEventListener("click", ()=>{
+  if(confirm({pt:"Resetar este progresso?",en:"Reset this progress?",es:"¿Reiniciar este progreso?"}[curLang]||"Reset?")){
+    state={answers:{},theme:selTheme.value,side:selSide.value,lang:selLang.value};
+    storeSet("state", state);
+    paintPieces(); refreshStatus(); updateProgress();
+    alert({pt:"Ok!",en:"Done!",es:"¡Listo!"}[curLang]||"Ok");
+  }
+});
+btnPersist.addEventListener("click", ()=>{
+  USE_LOCAL = !USE_LOCAL;
+  btnPersist.setAttribute("aria-pressed", USE_LOCAL ? "true":"false");
+  btnPersist.textContent = USE_LOCAL ? t("persistOn") : t("persistOff");
+  // migra estado atual para o armazenamento ativo
+  storeSet("state", state);
+});
+
+/* ===== init ===== */
+applyI18N();
+buildBoard();
+</script>
+</body>
+</html>
