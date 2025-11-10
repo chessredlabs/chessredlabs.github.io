@@ -3,169 +3,360 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Chess Red — 6 Perguntas</title>
+<title>Chess Red — 6 Perguntas (Tabuleiro Realístico)</title>
 <style>
-  body{font-family:Inter,system-ui,Arial;background:#071026;color:#e6eef8;padding:18px}
-  .wrap{max-width:880px;margin:0 auto}
-  h1{margin:0 0 8px;font-size:22px}
-  .muted{color:#93a0b6;font-size:13px}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
-  .card{background:#0b1220;border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:12px}
-  .side{display:flex;flex-direction:column;gap:6px}
-  .title{font-weight:700;margin-bottom:6px}
-  .piece{display:inline-block;padding:6px 10px;border-radius:999px;font-weight:700}
-  .red{background:#ffdede;color:#4b0b0b}
-  .blue{background:#dbe9ff;color:#032a5e}
-  .dead{opacity:.35;text-decoration:line-through}
-  .qbox{background:#071126;border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:12px}
-  .big{font-size:18px;font-weight:700}
-  .opts{display:flex;flex-direction:column;gap:8px;margin-top:10px}
-  button.opt{padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:#10233d;color:#eaf2ff;cursor:pointer}
-  button.opt:disabled{opacity:.5;cursor:not-allowed}
-  .status{margin-top:12px;background:#071126;border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:10px}
-  .ok{color:#aee6b0}
-  .danger{color:#ffb4b4}
-  .center{text-align:center}
-  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+:root{
+  --bg:#071026; --card:#0b1220; --ink:#e6eef8; --muted:#93a0b6;
+  --light:#f0d9b5; --dark:#b58863;
+  --redBg:#ffdede; --redInk:#4b0b0b; --blueBg:#dbe9ff; --blueInk:#032a5e;
+  --ok:#aee6b0; --bad:#ffb4b4;
+}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#04102a,#071026);color:var(--ink);font-family:Inter,system-ui,Arial;padding:18px}
+.wrap{max-width:1100px;margin:0 auto}
+.header{display:flex;align-items:center;gap:12px}
+.h1{margin:0;font-size:22px}
+.muted{color:var(--muted);font-size:13px}
+.layout{display:flex;gap:18px;margin-top:14px;align-items:flex-start}
+.boardWrap{background:var(--card);padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,0.05)}
+.board{display:grid;grid-template-columns:repeat(8,64px);grid-template-rows:repeat(8,64px);gap:0;border-radius:6px;user-select:none}
+.square{width:64px;height:64px;display:flex;align-items:center;justify-content:center;position:relative;font-weight:700}
+.coord{position:absolute;left:4px;top:4px;font-size:10px;color:rgba(0,0,0,0.45)}
+.light{background:var(--light);color:#121212}
+.dark{background:var(--dark);color:#1a1208}
+.piece{width:56px;height:56px;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 -8px 20px rgba(0,0,0,.12);transition:transform .14s}
+.piece:focus{outline:3px solid rgba(255,215,125,.12);outline-offset:4px}
+.piece:hover{transform:translateY(-4px)}
+.sym{font-size:20px}
+.lbl{font-size:11px;margin-top:4px}
+.red{background:linear-gradient(180deg,#ffdede,#ffefef);color:var(--redInk)}
+.blue{background:linear-gradient(180deg,#e6f0ff,#dbe9ff);color:var(--blueInk)}
+.dead{opacity:.28;filter:grayscale(.6);text-decoration:line-through}
+.info{min-width:360px}
+.card{background:var(--card);border-radius:10px;padding:12px;border:1px solid rgba(255,255,255,.04)}
+.qtitle{font-weight:800;font-size:18px}
+.qtext{margin-top:8px;color:var(--muted)}
+.opts{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.opt{display:flex;gap:10px;align-items:flex-start;background:#10223b;border:1px solid rgba(255,255,255,.06);padding:10px;border-radius:8px;cursor:pointer;color:var(--ink)}
+.opt b{display:inline-block;width:24px;height:24px;border-radius:6px;background:#0a1830;text-align:center;line-height:24px}
+.opt:disabled{opacity:.5;cursor:not-allowed}
+.hud{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.pill{padding:8px 10px;border-radius:999px;background:rgba(255,255,255,.03);font-weight:700}
+.msg{margin-top:12px}
+.controls{display:flex;gap:8px;align-items:center;margin-top:12px}
+.btn{padding:8px 12px;border-radius:8px;background:#0f2a4b;border:1px solid rgba(255,255,255,.06);cursor:pointer}
+.legend{margin-top:10px;color:var(--muted);font-size:13px}
+.coordLabel{display:flex;justify-content:space-between;margin-top:8px;color:var(--muted);font-size:13px}
+@media(max-width:900px){
+  .layout{flex-direction:column;align-items:center}
+  .board{grid-template-columns:repeat(8,44px);grid-template-rows:repeat(8,44px)}
+  .square{width:44px;height:44px}
+  .piece{width:38px;height:38px}
+}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Chess Red — 6 Perguntas</h1>
-  <div class="muted">Acertos removem peças azuis; erros removem suas peças. Precisa de <b>4/6</b> acertos e <b>não errar o Rei</b>.</div>
-
-  <div class="grid">
-    <div class="card">
-      <div class="title">Red (você)</div>
-      <div id="red_pawn"   class="piece red">PEÃO</div>
-      <div id="red_bishop" class="piece red">BISPO</div>
-      <div id="red_knight" class="piece red">CAVALO</div>
-      <div id="red_rook"   class="piece red">TORRE</div>
-      <div id="red_queen"  class="piece red">RAINHA</div>
-      <div id="red_king"   class="piece red">REI</div>
-    </div>
-    <div class="card">
-      <div class="title">Blue (inimigo)</div>
-      <div id="blue_pawn"   class="piece blue">PEÃO</div>
-      <div id="blue_bishop" class="piece blue">BISPO</div>
-      <div id="blue_knight" class="piece blue">CAVALO</div>
-      <div id="blue_rook"   class="piece blue">TORRE</div>
-      <div id="blue_queen"  class="piece blue">RAINHA</div>
-      <div id="blue_king"   class="piece blue">REI</div>
+  <div class="header">
+    <div style="width:56px;height:56px;border-radius:10px;background:linear-gradient(135deg,#d9464a,#2563eb);display:flex;align-items:center;justify-content:center;font-weight:900">CR</div>
+    <div>
+      <h1 class="h1">Chess Red — 6 Perguntas (Posição de Ataque)</h1>
+      <div class="muted">Peças Red avançadas no tabuleiro para dar sentido lúdico à possibilidade de erro/acerto. Perguntas vinculadas às peças em destaque.</div>
     </div>
   </div>
 
-  <div class="qbox">
-    <div id="qtitle" class="big">Pergunta 1 de 6</div>
-    <div id="qtext" style="margin-top:6px"></div>
-    <div id="opts" class="opts"></div>
-  </div>
+  <div class="layout">
+    <!-- TABULEIRO -->
+    <div class="boardWrap" role="region" aria-label="Tabuleiro de xadrez">
+      <div style="display:flex;gap:18px;align-items:center;margin-bottom:8px">
+        <div class="legend"><strong>Legenda:</strong> <span style="margin-left:8px">Peças <span style="background:#ffdede;color:#4b0b0b;padding:3px 8px;border-radius:6px">Red</span> (ataque)</span> • <span style="margin-left:8px">Peças <span style="background:#dbe9ff;color:#032a5e;padding:3px 8px;border-radius:6px">Blue</span> (defesa)</span></div>
+      </div>
 
-  <div class="status">
-    <div><b>Acertos:</b> <span id="hits">0</span> / 6 &nbsp;&nbsp; <b>Erros:</b> <span id="errs">0</span></div>
-    <div id="msg" style="margin-top:6px"></div>
-    <div class="row" style="margin-top:8px">
-      <button id="reset" class="opt">Reiniciar</button>
+      <div class="board" id="board" aria-hidden="false"></div>
+
+      <div class="coordLabel">
+        <div class="muted">Coordenadas: a1 (baixo-esq) → h8 (cima-dir)</div>
+        <div class="muted">Sessões independentes (aba)</div>
+      </div>
     </div>
+
+    <!-- INFO / PERGUNTA -->
+    <aside class="info">
+      <div class="card">
+        <div class="qtitle" id="qtitle">Pergunta 1 de 6 — (<span id="qpiece">Peão</span>)</div>
+        <div class="qtext" id="qtext"></div>
+
+        <div class="opts" id="opts"></div>
+
+        <div class="hud">
+          <div class="pill">Acertos: <span id="hits">0</span>/6</div>
+          <div class="pill">Erros: <span id="errs">0</span></div>
+          <div class="pill">Regra do Rei: errar a pergunta do Rei = <span style="color:var(--bad)">Game Over</span></div>
+        </div>
+
+        <div class="msg" id="msg"></div>
+
+        <div class="controls">
+          <button id="reset" class="btn">Reiniciar</button>
+          <button id="hint" class="btn" title="Dica visual: mostra quais peças estão em ataque">Mostrar ataque</button>
+        </div>
+
+        <div class="legend" style="margin-top:8px">
+          Objetivo: acertar ≥ 4/6 E não errar a pergunta do Rei. Cada acerto remove a peça azul correspondente; cada erro remove sua peça.
+        </div>
+      </div>
+    </aside>
   </div>
 </div>
 
 <script>
+/* Tabuleiro 8x8 com posições reais; Red avançadas (formação de ataque) para dar sentido visual.
+   Coordinate mapping: a1 bottom-left -> h8 top-right.
+   We'll render squares with coords, place blue (inimigo) em back rank clássico (a8..h8 e pawns a7..h7)
+   e colocar Red com peças avançadas (ex.: peões e peças de ataque em fileiras 5/4) para senso de risco.
+*/
 (function(){
-  // 6 perguntas (PT) — todas MCQ. Ordem das peças: pawn, bishop, knight, rook, queen, king
-  const QUESTIONS = [
-    { piece:'pawn',   text:'1) Recon inicial: melhor primeira ação para mapear superfície pública?', 
-      opts:['Scan agressivo em todo IP range','Mapear pegadas públicas (DNS, certificados, repositórios)','Phishing imediato','Brute-force de contas'], correct:1 },
-    { piece:'bishop', text:'2) Encontrou token em repositório antigo (backup). Próximo passo responsável?', 
-      opts:['Usar o token para avançar','Correlacionar com artefatos e validar origem/escopo','Publicar o token para alertar','Ignorar por ora'], correct:1 },
-    { piece:'knight', text:'3) Indícios de SSRF. O que investigar primeiro?', 
-      opts:['Acesso a metadata 169.254.169.254 / serviços internos','Desligar o servidor de produção','Aumentar timeouts HTTP','Trocar o banco de dados'], correct:0 },
-    { piece:'rook',   text:'4) Perímetro: qual combinação é mais eficaz para reduzir risco imediatamente?', 
-      opts:['Abrir portas para acelerar testes','Segmentação + hardening + regras WAF','Ignorar TLS em ambiente interno','Permitir admin exposto publicamente'], correct:1 },
-    { piece:'queen',  text:'5) Incidente em vários serviços: qual priorização é mais adequada?', 
-      opts:['Parar tudo sem análise','Focar em ativos críticos e conter movimento lateral','Publicar publicamente antes da contenção','Ignorar alertas que não são críticos'], correct:1 },
-    { piece:'king',   text:'6) (Rei) Como provar ao board que a campanha Red demonstrou risco estratégico?', 
-      opts:['Listar exploits sem impacto','Evidenciar impacto em ativos críticos, cadeia de pivôs e recomendações executáveis (com evidências)','Divulgar falhas publicamente','Entregar apenas logs brutos'], correct:1 }
-  ];
-
-  const el = id => document.getElementById(id);
-  let idx = 0, hits = 0, errs = 0, finished = false, kingCorrect = null;
-
-  function renderQ(){
-    const q = QUESTIONS[idx];
-    el('qtitle').textContent = `Pergunta ${idx+1} de ${QUESTIONS.length} — (${nomePeca(q.piece)})`;
-    el('qtext').textContent  = q.text;
-    const opts = el('opts'); opts.innerHTML = '';
-    q.opts.forEach((o,i)=>{
-      const b = document.createElement('button');
-      b.className = 'opt';
-      b.textContent = o;
-      b.onclick = ()=>answer(i);
-      opts.appendChild(b);
-    });
-    updateHUD('');
+  const boardEl = document.getElementById('board');
+  const files = ['a','b','c','d','e','f','g','h'];
+  // create 8x8 squares, top to bottom (rank 8 -> 1)
+  for(let r=8;r>=1;r--){
+    for(let f=0;f<8;f++){
+      const sq = document.createElement('div');
+      const pos = files[f]+r;
+      sq.className = 'square '+(((f+r)%2===0)?'light':'dark');
+      sq.dataset.pos = pos;
+      const coord = document.createElement('div'); coord.className='coord'; coord.textContent = pos;
+      sq.appendChild(coord);
+      boardEl.appendChild(sq);
+    }
   }
 
-  function nomePeca(p){
-    return {pawn:'Peão', bishop:'Bispo', knight:'Cavalo', rook:'Torre', queen:'Rainha', king:'Rei'}[p] || p;
+  // helper to place a piece element
+  function place(id,side,type,pos,label){
+    const square = Array.from(boardEl.children).find(c=>c.dataset.pos===pos);
+    if(!square) return null;
+    const b = document.createElement('button');
+    b.className='piece '+(side==='red'?'red':'blue');
+    b.dataset.id = id;
+    b.dataset.side = side;
+    b.dataset.type = type;
+    b.dataset.pos = pos;
+    b.setAttribute('aria-label', label+' '+pos);
+    b.innerHTML = `<div class="sym">${symbolFor(type, side)}</div><div class="lbl">${label}</div>`;
+    b.onclick = ()=>openForPiece(id);
+    square.appendChild(b);
+    return b;
+  }
+
+  function symbolFor(type, side){
+    const map = {king:'♚',queen:'♛',rook:'♜',bishop:'♝',knight:'♞',pawn:'♟'};
+    return map[type]||'♟';
+  }
+
+  // BLUE original positions (defensivo - back rank)
+  const bluePositions = {
+    king:['e8'], queen:['d8'], rooks:['a8','h8'], bishops:['c8','f8'], knights:['b8','g8'],
+    pawns:['a7','b7','c7','d7','e7','f7','g7','h7']
+  };
+
+  // Place blue pieces (defesa)
+  place('blue_king','blue','king','e8','REI');
+  place('blue_queen','blue','queen','d8','RAINHA');
+  place('blue_rook_a','blue','rook','a8','TORRE');
+  place('blue_rook_h','blue','rook','h8','TORRE');
+  place('blue_bishop_c','blue','bishop','c8','BISPO');
+  place('blue_bishop_f','blue','bishop','f8','BISPO');
+  place('blue_knight_b','blue','knight','b8','CAVALO');
+  place('blue_knight_g','blue','knight','g8','CAVALO');
+  // pawns: we'll remove some later as answers happen
+  const bluePawnIds = ['a7','b7','c7','d7','e7','f7','g7','h7'];
+  bluePawnIds.forEach((pos,i)=>place('blue_pawn_'+i,'blue','pawn',pos,'PEÃO'));
+
+  // RED: arrange in attacking formation (advanced)
+  // We'll pick 6 Red pieces relevant to questions and place them in attack positions:
+  // Pawn -> e5 (advanced pawn)
+  // Bishop -> c4 (bishop on an outpost)
+  // Knight -> g5 (knight advanced)
+  // Rook -> h4 (rook on open file)
+  // Queen -> d3 (queen supporting)
+  // King -> e1 (safe but exposed; king question decisive)
+  place('red_pawn','red','pawn','e5','PEÃO');
+  place('red_bishop','red','bishop','c4','BISPO');
+  place('red_knight','red','knight','g5','CAVALO');
+  place('red_rook','red','rook','h4','TORRE');
+  place('red_queen','red','queen','d3','RAINHA');
+  place('red_king','red','king','e1','REI');
+
+  // Small visual hint toggle: mark attacked squares (optional)
+  let showAttack = false;
+  const hintBtn = document.getElementById('hint');
+  hintBtn.addEventListener('click', ()=>{ showAttack = !showAttack; updateAttackHints(); });
+
+  function updateAttackHints(){
+    // clear previous
+    document.querySelectorAll('.square').forEach(s=>s.style.boxShadow='none');
+    if(!showAttack) return;
+    // For simplicity, compute crude attack influence: mark squares in front of red advanced pieces
+    const attackSquares = new Set();
+    ['e5','c4','g5','h4','d3'].forEach(p=>{
+      const coords = p;
+      // simple heuristic: mark neighbors + forward ranks towards blue (increase rank)
+      const file = coords[0].charCodeAt(0);
+      const rank = parseInt(coords[1]);
+      for(let df=-1; df<=1; df++){
+        for(let dr=1; dr<=2; dr++){
+          const nf = String.fromCharCode(file+df);
+          const nr = rank + dr;
+          if(nf>='a' && nf<='h' && nr>=1 && nr<=8) attackSquares.add(nf+nr);
+        }
+      }
+    });
+    attackSquares.forEach(pos=>{
+      const square = Array.from(boardEl.children).find(c=>c.dataset.pos===pos);
+      if(square) square.style.boxShadow='inset 0 0 0 3px rgba(217,70,74,0.18)';
+    });
+  }
+
+  /* ==== LÓGICA DAS PERGUNTAS (6) ====
+     Ordem e vínculo:
+       1) Pawn    -> red_pawn  (e5)
+       2) Bishop  -> red_bishop (c4)
+       3) Knight  -> red_knight (g5)
+       4) Rook    -> red_rook (h4)
+       5) Queen   -> red_queen (d3)
+       6) King    -> red_king (e1)  <-- decisória (não pode errar)
+  */
+  const QUESTIONS = [
+    { id:'pawn',  pieceId:'red_pawn',  q:'1) Recon inicial — qual a melhor primeira ação para mapear superfície pública?', 
+      opts:['A) Scan agressivo massivo em todo IP range','B) Mapear pegadas públicas: DNS, certificados, repositórios, subdomínios','C) Phishing imediato sem preparo','D) Brute-force de credenciais'], correct:1 },
+    { id:'bishop', pieceId:'red_bishop', q:'2) Token encontrado em backup público — primeiro passo responsável?', 
+      opts:['A) Usar o token para avançar','B) Correlacionar artefatos, validar origem/escopo e documentar','C) Publicar para forçar correção','D) Ignorar'], correct:1 },
+    { id:'knight', pieceId:'red_knight', q:'3) Indícios de SSRF: qual investigação inicial pode escalar impacto?', 
+      opts:['A) Tentar metadata 169.254.169.254 e serviços internos','B) Reiniciar serviços','C) Aumentar timeouts','D) Alterar banco de dados'], correct:0 },
+    { id:'rook',   pieceId:'red_rook',   q:'4) Perímetro: qual opção reduz risco de forma imediata?', 
+      opts:['A) Abrir portas para acelerar testes','B) Segmentação + hardening + regras WAF','C) Ignorar TLS interno','D) Expor admin'], correct:1 },
+    { id:'queen',  pieceId:'red_queen',  q:'5) Incidente multi-serviço: priorização mais adequada?', 
+      opts:['A) Parar tudo sem análise','B) Focar em ativos críticos e conter movimento lateral com telemetria','C) Comunicar publicamente antes de conter','D) Ignorar alertas não críticos'], correct:1 },
+    { id:'king',   pieceId:'red_king',   q:'6) (REI) Como provar ao board que uma campanha Red demonstrou risco estratégico?', 
+      opts:['A) Entregar lista de exploits sem contexto','B) Apresentar impacto em ativos críticos, cadeia de pivôs e recomendações acionáveis com evidências','C) Divulgar publicamente','D) Entregar apenas logs brutos'], correct:1 }
+  ];
+
+  // Map piece type to blue counterpart id to remove on correct
+  const blueMap = { pawn:'blue_pawn_0', bishop:'blue_bishop_c', knight:'blue_knight_b', rook:'blue_rook_a', queen:'blue_queen', king:'blue_king' };
+  // Note: blue pawns were created as blue_pawn_0..7; we'll remove one generic pawn (closest file) for pawn Q.
+
+  // state
+  let idx = 0, hits = 0, errs = 0, finished = false, kingCorrect = null;
+  const hitsEl = document.getElementById('hits'), errsEl = document.getElementById('errs'), qtitle = document.getElementById('qtitle'), qtext = document.getElementById('qtext'), optsEl = document.getElementById('opts'), qpieceEl = document.getElementById('qpiece'), msgEl = document.getElementById('msg');
+
+  function render(){
+    const Q = QUESTIONS[idx];
+    qtitle.innerHTML = `Pergunta ${idx+1} de 6 — (<span style="font-weight:800">${labelForPiece(Q.pieceId)}</span>)`;
+    qtext.textContent = Q.q;
+    qpieceEl.textContent = labelForPiece(Q.pieceId);
+    optsEl.innerHTML='';
+    Q.opts.forEach((text,i)=>{
+      const b = document.createElement('button');
+      b.className='opt';
+      b.innerHTML = `<b>${'ABCD'[i]}</b> <span>${text}</span>`;
+      b.onclick = ()=>answer(i);
+      optsEl.appendChild(b);
+    });
+    hitsEl.textContent = hits; errsEl.textContent = errs;
+    updateAttackHints();
+  }
+
+  function labelForPiece(pid){
+    const map = {'red_pawn':'Peão','red_bishop':'Bispo','red_knight':'Cavalo','red_rook':'Torre','red_queen':'Rainha','red_king':'Rei'};
+    return map[pid] || pid;
   }
 
   function answer(choice){
     if(finished) return;
-    const q = QUESTIONS[idx];
-    const correct = (choice === q.correct);
-
+    const Q = QUESTIONS[idx];
+    const correct = (choice === Q.correct);
     if(correct){
       hits++;
-      killBlue(q.piece);
-      if(q.piece === 'king') kingCorrect = true;
-      updateHUD(`<span class="ok">Correto — ${nomePeca(q.piece)} azul eliminado.</span>`);
-    }else{
+      markBlueDead(Q.id);
+      if(Q.id === 'king') kingCorrect = true;
+      showMsg('ok', `Correto — peça inimiga (${labelForPiece(Q.pieceId)}) eliminada.`);
+    } else {
       errs++;
-      killRed(q.piece);
-      if(q.piece === 'king'){ // Rei não pode errar
-        end(false, 'Você errou a pergunta do Rei — Game Over.');
-        return;
-      }
-      updateHUD(`<span class="danger">Errado — ${nomePeca(q.piece)} vermelho eliminado.</span>`);
+      markRedDead(Q.pieceId);
+      if(Q.id === 'king'){ end(false, 'Você errou a pergunta do Rei — <strong>Game Over</strong>.'); return; }
+      showMsg('bad', `Errado — sua peça (${labelForPiece(Q.pieceId)}) foi eliminada.`);
     }
-
     idx++;
     if(idx >= QUESTIONS.length){
-      // fim: precisa de 4+ acertos e rei correto
       const win = (hits >= 4) && (kingCorrect === true);
-      end(win, win ? 'Vitória! Você atingiu 4/6 (ou mais) e acertou o Rei.' : 'Derrota. São necessários 4/6 acertos e acertar o Rei.');
-    }else{
-      setTimeout(renderQ, 700);
+      end(win, win ? 'Vitória! Você fez ≥ 4/6 e acertou o Rei.' : 'Derrota. São necessários ≥ 4/6 e acertar o Rei.');
+      return;
+    }
+    setTimeout(render, 700);
+    updateHUD();
+  }
+
+  function updateHUD(){ hitsEl.textContent = hits; errsEl.textContent = errs; }
+
+  function markBlueDead(qid){
+    // choose which blue piece to remove depending on qid mapping
+    let targetId = null;
+    if(qid === 'pawn') {
+      // remove a7..h7 pawn closest to e-file if present, fallback to any
+      const preferredFiles = ['e7','d7','f7','c7','g7','b7','h7','a7'];
+      for(const p of preferredFiles){
+        const node = Array.from(boardEl.children).find(c=>c.dataset.pos===p).querySelector('.piece');
+        if(node && node.dataset.side==='blue' && node.dataset.type==='pawn'){ targetId = node.dataset.id; break; }
+      }
+    } else if(qid==='bishop') {
+      const node = Array.from(boardEl.querySelectorAll('.piece')).find(n=>n.dataset.side==='blue' && n.dataset.type==='bishop');
+      if(node) targetId = node.dataset.id;
+    } else if(qid==='knight') {
+      const node = Array.from(boardEl.querySelectorAll('.piece')).find(n=>n.dataset.side==='blue' && n.dataset.type==='knight');
+      if(node) targetId = node.dataset.id;
+    } else if(qid==='rook') {
+      const node = Array.from(boardEl.querySelectorAll('.piece')).find(n=>n.dataset.side==='blue' && n.dataset.type==='rook');
+      if(node) targetId = node.dataset.id;
+    } else if(qid==='queen') {
+      const node = Array.from(boardEl.querySelectorAll('.piece')).find(n=>n.dataset.side==='blue' && n.dataset.type==='queen');
+      if(node) targetId = node.dataset.id;
+    } else if(qid==='king') {
+      const node = Array.from(boardEl.querySelectorAll('.piece')).find(n=>n.dataset.side==='blue' && n.dataset.type==='king');
+      if(node) targetId = node.dataset.id;
+    }
+    if(targetId) {
+      const el = Array.from(boardEl.querySelectorAll('.piece')).find(n=>n.dataset.id===targetId);
+      if(el) {
+        el.classList.add('dead');
+        el.querySelector('.lbl').textContent += ' ✖';
+        // remove from DOM after small animation
+        setTimeout(()=>{ if(el.parentNode) el.parentNode.removeChild(el); },600);
+      }
     }
   }
 
-  function killBlue(piece){
-    const e = el('blue_'+piece);
-    if(e){ e.classList.add('dead'); e.textContent = e.textContent + ' ✖'; }
-  }
-  function killRed(piece){
-    const e = el('red_'+piece);
-    if(e){ e.classList.add('dead'); e.textContent = e.textContent + ' ✖'; }
-  }
-
-  function updateHUD(msg){
-    el('hits').textContent = hits;
-    el('errs').textContent = errs;
-    if(msg) el('msg').innerHTML = msg;
+  function markRedDead(pieceId){
+    const el = Array.from(boardEl.querySelectorAll('.piece')).find(n=>n.dataset.id===pieceId);
+    if(el){
+      el.classList.add('dead');
+      el.querySelector('.lbl').textContent += ' ✖';
+      setTimeout(()=>{ if(el.parentNode) el.parentNode.removeChild(el); },600);
+    }
   }
 
-  function end(victory, message){
+  function showMsg(kind, text){ msgEl.innerHTML = kind==='ok' ? `<span style="color:var(--ok)">${text}</span>` : `<span style="color:var(--bad)">${text}</span>`; }
+
+  function end(victory, text){
     finished = true;
-    // desabilita opções
-    document.querySelectorAll('button.opt').forEach(b=>b.disabled = true);
-    el('msg').innerHTML = (victory? `<span class="ok">${message}</span>` : `<span class="danger">${message}</span>`);
+    document.querySelectorAll('.opt').forEach(b=>b.disabled=true);
+    if(victory) showMsg('ok', text); else showMsg('bad', text);
   }
 
-  el('reset').addEventListener('click', ()=>location.reload());
+  document.getElementById('reset').addEventListener('click', ()=>location.reload());
 
-  // init
-  renderQ();
+  // initial render
+  render();
+  updateHUD();
 })();
 </script>
 </body>
